@@ -1,0 +1,87 @@
+# Automation: HACS – Upgrade All Pending Integrations
+#
+# This automation runs every night at 03:00 and installs every pending
+# HACS update that is represented as a Home Assistant "update" entity
+# (requires HA 2022.4+ and HACS 1.26+).
+#
+# Usage
+# -----
+# Copy this file to your <config>/automations/ directory and reload
+# automations, OR paste its contents into the Automations UI editor.
+#
+# The automation can also be triggered manually from the Developer Tools →
+# Services panel or from the Automation card in the UI.
+#
+# Prerequisites
+# -------------
+# • HACS installed and at least one repository managed by it.
+# • The HACS integration must expose "update" entities.  Verify in
+#   Settings → Devices & Services → Entities (filter domain: update).
+
+alias: HACS – Upgrade All
+description: >
+  Install every pending HACS update entity automatically each night.
+  Can also be triggered manually at any time.
+
+trigger:
+  # Runs automatically every night at 03:00 local time.
+  - platform: time
+    at: "03:00:00"
+
+condition: []
+
+action:
+  # Step 1 – Refresh all update entities so their state reflects the
+  #          latest available versions before we decide what to install.
+  - service: homeassistant.update_entity
+    target:
+      entity_id: >
+        {{ states.update
+           | selectattr('attributes.integration', 'defined')
+           | selectattr('attributes.integration', 'eq', 'hacs')
+           | map(attribute='entity_id')
+           | list }}
+
+  # Brief pause to let the refresh settle.
+  - delay:
+      seconds: 5
+
+  # Step 2 – Collect the entity IDs of all HACS updates whose state is
+  #          "on" (meaning an update is available and ready to install).
+  - variables:
+      pending_updates: >
+        {{ states.update
+           | selectattr('attributes.integration', 'defined')
+           | selectattr('attributes.integration', 'eq', 'hacs')
+           | selectattr('state', 'eq', 'on')
+           | map(attribute='entity_id')
+           | list }}
+
+  # Step 3 – Only proceed when there is at least one pending update.
+  - condition: template
+    value_template: "{{ pending_updates | length > 0 }}"
+
+  # Step 4 – Log what we are about to install (visible in the HA log and
+  #          in the Automation trace).
+  - service: system_log.write
+    data:
+      message: >
+        HACS upgrade-all: installing {{ pending_updates | length }} update(s):
+        {{ pending_updates | join(', ') }}
+      level: info
+
+  # Step 5 – Install each pending update one by one so that a failure in
+  #          one repository does not block the others.
+  - repeat:
+      for_each: "{{ pending_updates }}"
+      sequence:
+        - service: update.install
+          continue_on_error: true
+          target:
+            entity_id: "{{ repeat.item }}"
+        # Small delay between installs to avoid overwhelming HACS / GitHub.
+        - delay:
+            seconds: 3
+
+mode: single
+max_exceeded: silent

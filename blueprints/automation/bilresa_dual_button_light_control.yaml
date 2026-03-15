@@ -1,0 +1,108 @@
+blueprint:
+  name: "IKEA BILRESA Dual Button – Light Control"
+  description: >
+    Control a light with the IKEA BILRESA dual-button remote via ZHA.
+
+    - **Short press top button** → toggle light on/off
+    - **Short press bottom button** → turn light off
+    - **Long press top button** → increase brightness by the configured step
+    - **Long press bottom button** → decrease brightness by the configured step
+    - **Button release** → stop brightness change (no-op; the light keeps its new level)
+  domain: automation
+  source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_dual_button_light_control.yaml
+  input:
+    remote:
+      name: BILRESA Remote
+      description: >
+        The IKEA BILRESA dual-button remote device paired via ZHA.
+        Select the device (not an entity) from the ZHA device registry.
+      selector:
+        device:
+          integration: zha
+
+    light:
+      name: Light
+      description: The light (or light group) to control.
+      selector:
+        target:
+          entity:
+            domain: light
+
+    brightness_step_pct:
+      name: Brightness Step (%)
+      description: >
+        How many percentage points the brightness changes on each long-press
+        event (default 10 %).
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          unit_of_measurement: "%"
+          mode: slider
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote
+
+action:
+  - variables:
+      command: "{{ trigger.event.data.command }}"
+      args: "{{ trigger.event.data.args | default({}) }}"
+      step: !input brightness_step_pct
+
+  - choose:
+      # ── Short press TOP ────────────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ command == 'on' }}"
+        sequence:
+          - service: light.toggle
+            target: !input light
+
+      # ── Short press BOTTOM ─────────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ command == 'off' }}"
+        sequence:
+          - service: light.turn_off
+            target: !input light
+
+      # ── Long press TOP (brightness UP) ────────────────────────────────────
+      # ZHA reports "move_with_on_off" with move_mode 0 (up) for the top button.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ command == 'move_with_on_off' and
+                 (args.get('move_mode', args.get('moveMode', -1)) | int) == 0 }}
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ step | int }}"
+
+      # ── Long press BOTTOM (brightness DOWN) ───────────────────────────────
+      # ZHA reports "move" with move_mode 1 (down) for the bottom button.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ command == 'move' and
+                 (args.get('move_mode', args.get('moveMode', -1)) | int) == 1 }}
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ (step | int) * -1 }}"
+
+      # ── Button release (stop) ─────────────────────────────────────────────
+      # The "stop" / "stop_with_on_off" command is silently ignored here;
+      # the light simply keeps whatever brightness was last set.
+      - conditions:
+          - condition: template
+            value_template: "{{ command in ['stop', 'stop_with_on_off'] }}"
+        sequence: []

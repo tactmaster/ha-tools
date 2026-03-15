@@ -1,0 +1,111 @@
+blueprint:
+  name: "IKEA BILRESA Scroll Wheel – Light Control"
+  description: >
+    Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via ZHA.
+
+    The scroll wheel sends a `step_with_on_off` command (action code **32768** /
+    `0x8000`) when rotating clockwise (brightness up) and a `step` command when
+    rotating counter-clockwise (brightness down).  A short press on the wheel
+    sends a `toggle` command.
+
+    - **Press wheel** → toggle light on/off
+    - **Rotate clockwise** → increase brightness
+    - **Rotate counter-clockwise** → decrease brightness
+  domain: automation
+  source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_scroll_wheel_light_control.yaml
+  input:
+    remote:
+      name: BILRESA Scroll Wheel Remote
+      description: >
+        The IKEA BILRESA scroll-wheel device paired via ZHA.
+        Select the device (not an entity) from the ZHA device registry.
+      selector:
+        device:
+          integration: zha
+
+    light:
+      name: Light
+      description: The light (or light group) to control.
+      selector:
+        target:
+          entity:
+            domain: light
+
+    brightness_step_pct:
+      name: Brightness Step (%)
+      description: >
+        How many percentage points the brightness changes per scroll step
+        (default 10 %).
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          unit_of_measurement: "%"
+          mode: slider
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input remote
+
+action:
+  - variables:
+      # The command string sent by ZHA (e.g. "step_with_on_off", "step", "toggle")
+      command: "{{ trigger.event.data.command }}"
+      # args dict – may contain 'step_mode' (0 = up, 1 = down) and 'step_size'
+      args: "{{ trigger.event.data.args | default({}) }}"
+      step: !input brightness_step_pct
+
+  - choose:
+      # ── Press wheel → toggle ───────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ command == 'toggle' }}"
+        sequence:
+          - service: light.toggle
+            target: !input light
+
+      # ── Rotate clockwise → brightness UP ──────────────────────────────────
+      # ZHA: command = "step_with_on_off", step_mode = 0 (up)
+      # This is action code 0x8000 (32768) in the Zigbee Level Control cluster.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ command == 'step_with_on_off' and
+                 (args.get('step_mode', args.get('stepMode', -1)) | int) == 0 }}
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ step | int }}"
+
+      # ── Rotate counter-clockwise → brightness DOWN ────────────────────────
+      # ZHA: command = "step", step_mode = 1 (down)
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ command == 'step' and
+                 (args.get('step_mode', args.get('stepMode', -1)) | int) == 1 }}
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ (step | int) * -1 }}"
+
+      # ── move_to_level fallback ─────────────────────────────────────────────
+      # Some firmware versions report "move_to_level_with_on_off" with an
+      # absolute level value (0–254).  Map it directly to brightness.
+      - conditions:
+          - condition: template
+            value_template: "{{ command in ['move_to_level', 'move_to_level_with_on_off'] }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              # Zigbee level 0-254 → HA brightness 0-255 (virtually identical)
+              brightness: "{{ args.get('level', args.get('Level', 0)) | int }}"
