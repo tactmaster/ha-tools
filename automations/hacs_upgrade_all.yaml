@@ -1,7 +1,8 @@
-# Automation: HACS – Upgrade All Pending Integrations
+# Automation: HACS & Add-ons – Upgrade All Pending Updates
 #
 # This automation runs every night at 03:00 and installs every pending
-# HACS update that is represented as a Home Assistant "update" entity
+# HACS update and every pending Home Assistant Supervisor add-on update
+# that is represented as a Home Assistant "update" entity
 # (requires HA 2022.5+ and HACS 2.0+).
 #
 # Usage
@@ -17,11 +18,14 @@
 # • HACS 2.0+ installed and at least one repository managed by it.
 # • The HACS integration must expose "update" entities.  Verify in
 #   Settings → Devices & Services → Entities (filter domain: update).
+# • For add-on updates: Home Assistant OS or Supervised install with the
+#   Supervisor ("hassio") integration active.
 # • Requires HA 2022.5+ for the integration_entities() template function.
 
-alias: HACS – Upgrade All
+alias: HACS & Add-ons – Upgrade All
 description: >
-  Install every pending HACS update entity automatically each night.
+  Install every pending HACS update and every pending Supervisor add-on
+  update automatically each night.
   Can also be triggered manually at any time.
 
 trigger:
@@ -43,18 +47,35 @@ action:
       entity_id: >
         {{ integration_entities('hacs') | select('match', 'update\.') | list }}
 
+  # Step 1b – Refresh all Supervisor add-on update entities.
+  #           Uses integration_entities('hassio') which covers all add-ons
+  #           managed by the Home Assistant Supervisor.
+  - service: homeassistant.update_entity
+    continue_on_error: true
+    target:
+      entity_id: >
+        {{ integration_entities('hassio') | select('match', 'update\.') | list }}
+
   # Brief pause to let the refresh settle.
   - delay:
       seconds: 5
 
-  # Step 2 – Collect the entity IDs of all HACS updates whose state is
-  #          "on" (meaning an update is available and ready to install).
+  # Step 2 – Collect the entity IDs of all HACS updates AND Supervisor
+  #          add-on updates whose state is "on" (meaning an update is
+  #          available and ready to install).
   - variables:
       pending_updates: >
-        {{ integration_entities('hacs')
-           | select('match', 'update\.')
-           | select('is_state', 'on')
-           | list }}
+        {{ (
+             integration_entities('hacs')
+             | select('match', 'update\.')
+             | select('is_state', 'on')
+             | list
+           ) + (
+             integration_entities('hassio')
+             | select('match', 'update\.')
+             | select('is_state', 'on')
+             | list
+           ) }}
 
   # Step 3 – Only proceed when there is at least one pending update.
   - condition: template
@@ -65,7 +86,7 @@ action:
   - service: system_log.write
     data:
       message: >
-        HACS upgrade-all: installing {{ pending_updates | length }} update(s):
+        HACS & add-on upgrade-all: installing {{ pending_updates | length }} update(s):
         {{ pending_updates | join(', ') }}
       level: info
 
