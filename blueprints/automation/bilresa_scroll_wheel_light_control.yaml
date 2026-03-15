@@ -1,27 +1,32 @@
 blueprint:
-  name: "IKEA BILRESA Scroll Wheel – Light Control"
+  name: "IKEA BILRESA Scroll Wheel – Light Control (Matter)"
   description: >
-    Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via ZHA.
+    Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via Matter.
 
-    The scroll wheel sends a `step_with_on_off` command (action code **32768** /
-    `0x8000`) when rotating clockwise (brightness up) and a `step` command when
-    rotating counter-clockwise (brightness down).  A short press on the wheel
-    sends a `toggle` command.
+    The BILRESA scroll wheel exposes a single **event entity** in Home Assistant.
+    It fires different `event_type` values depending on the physical action:
 
-    - **Press wheel** → toggle light on/off
-    - **Rotate clockwise** → increase brightness
-    - **Rotate counter-clockwise** → decrease brightness
+    - **Press wheel** → `single_press` → toggle light on/off
+    - **Rotate clockwise** → `step_up` → increase brightness
+    - **Rotate counter-clockwise** → `step_down` → decrease brightness
+
+    > **Note on action code 32768:** In ZHA/Zigbee this corresponds to the
+    > Level Control cluster command `step_with_on_off` (0x8000).  Via the
+    > Matter integration Home Assistant maps this to the `step_up` event type
+    > on the event entity.
   domain: automation
   source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_scroll_wheel_light_control.yaml
   input:
-    remote:
-      name: BILRESA Scroll Wheel Remote
+    wheel_entity:
+      name: Scroll Wheel Event Entity
       description: >
-        The IKEA BILRESA scroll-wheel device paired via ZHA.
-        Select the device (not an entity) from the ZHA device registry.
+        The event entity for the BILRESA scroll wheel exposed by the Matter
+        integration.  In Home Assistant go to Settings → Devices & Services →
+        your BILRESA device and select the event entity (typically labelled
+        "Dimmer" or "Scroll Wheel").
       selector:
-        device:
-          integration: zha
+        entity:
+          domain: event
 
     light:
       name: Light
@@ -48,36 +53,31 @@ mode: restart
 max_exceeded: silent
 
 trigger:
-  - platform: event
-    event_type: zha_event
-    event_data:
-      device_id: !input remote
+  # Matter button/level events arrive as state-changes on the event entity.
+  - platform: state
+    entity_id: !input wheel_entity
 
 action:
   - variables:
-      # The command string sent by ZHA (e.g. "step_with_on_off", "step", "toggle")
-      command: "{{ trigger.event.data.command }}"
-      # args dict – may contain 'step_mode' (0 = up, 1 = down) and 'step_size'
-      args: "{{ trigger.event.data.args | default({}) }}"
+      # The event_type attribute holds the action name (e.g. "step_up").
+      event_type: "{{ trigger.to_state.attributes.event_type | default('') }}"
       step: !input brightness_step_pct
 
   - choose:
       # ── Press wheel → toggle ───────────────────────────────────────────────
       - conditions:
           - condition: template
-            value_template: "{{ command == 'toggle' }}"
+            value_template: "{{ event_type == 'single_press' }}"
         sequence:
           - service: light.toggle
             target: !input light
 
       # ── Rotate clockwise → brightness UP ──────────────────────────────────
-      # ZHA: command = "step_with_on_off", step_mode = 0 (up)
-      # This is action code 0x8000 (32768) in the Zigbee Level Control cluster.
+      # Matter maps the Level Control "step_with_on_off" command (action code
+      # 0x8000 / 32768) to the "step_up" event type in HA.
       - conditions:
           - condition: template
-            value_template: >
-              {{ command == 'step_with_on_off' and
-                 (args.get('step_mode', args.get('stepMode', -1)) | int) == 0 }}
+            value_template: "{{ event_type in ['step_up', 'step_with_on_off'] }}"
         sequence:
           - service: light.turn_on
             target: !input light
@@ -85,12 +85,10 @@ action:
               brightness_step_pct: "{{ step | int }}"
 
       # ── Rotate counter-clockwise → brightness DOWN ────────────────────────
-      # ZHA: command = "step", step_mode = 1 (down)
+      # Matter maps the Level Control "step" (down) command to "step_down".
       - conditions:
           - condition: template
-            value_template: >
-              {{ command == 'step' and
-                 (args.get('step_mode', args.get('stepMode', -1)) | int) == 1 }}
+            value_template: "{{ event_type in ['step_down', 'step'] }}"
         sequence:
           - service: light.turn_on
             target: !input light
@@ -98,14 +96,15 @@ action:
               brightness_step_pct: "{{ (step | int) * -1 }}"
 
       # ── move_to_level fallback ─────────────────────────────────────────────
-      # Some firmware versions report "move_to_level_with_on_off" with an
-      # absolute level value (0–254).  Map it directly to brightness.
+      # Some firmware versions send a discrete level value directly.
+      # The level attribute (0–254) is mapped to HA brightness (0–255).
       - conditions:
           - condition: template
-            value_template: "{{ command in ['move_to_level', 'move_to_level_with_on_off'] }}"
+            value_template: "{{ event_type in ['move_to_level', 'move_to_level_with_on_off'] }}"
         sequence:
           - service: light.turn_on
             target: !input light
             data:
-              # Zigbee level 0-254 → HA brightness 0-255 (virtually identical)
-              brightness: "{{ args.get('level', args.get('Level', 0)) | int }}"
+              brightness: >
+                {{ (trigger.to_state.attributes.get('level',
+                    trigger.to_state.attributes.get('Level', 0)) | int) }}

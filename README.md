@@ -9,11 +9,14 @@ Ed's collection of Home Assistant blueprints, automations, and scripts.
 Blueprints live in `blueprints/automation/`.  
 Import them via **Settings → Automations & Scenes → Blueprints → Import Blueprint** and paste the raw GitHub URL.
 
-### IKEA BILRESA Dual Button – Light Control
+### IKEA BILRESA Dual Button – Light Control (Matter)
 
 **File:** `blueprints/automation/bilresa_dual_button_light_control.yaml`
 
-Controls a single light with the IKEA BILRESA two-button remote (ZHA).
+Controls a single light with the IKEA BILRESA two-button remote paired via **Matter**.
+
+The BILRESA exposes **two** `event` entities in HA — one per physical button.
+Select each entity in the blueprint inputs.
 
 | Action | Result |
 |---|---|
@@ -22,25 +25,26 @@ Controls a single light with the IKEA BILRESA two-button remote (ZHA).
 | Long press **top** button | Increase brightness |
 | Long press **bottom** button | Decrease brightness |
 
-Configurable inputs: remote device, target light, brightness step (%).
+Configurable inputs: top button event entity, bottom button event entity, target light, brightness step (%).
 
 ---
 
-### IKEA BILRESA Scroll Wheel – Light Control
+### IKEA BILRESA Scroll Wheel – Light Control (Matter)
 
 **File:** `blueprints/automation/bilresa_scroll_wheel_light_control.yaml`
 
-Controls a single light with the IKEA BILRESA scroll-wheel dimmer (ZHA).  
-The wheel sends Zigbee action code **32768 (0x8000 – `step_with_on_off`)** on clockwise rotation.
+Controls a single light with the IKEA BILRESA scroll-wheel dimmer paired via **Matter**.  
+The wheel emits event type **`step_up`** on clockwise rotation (corresponding to Zigbee/Matter
+Level Control command `step_with_on_off`, action code **32768 / 0x8000**).
 
-| Action | Result |
-|---|---|
-| Press wheel | Toggle light on / off |
-| Rotate **clockwise** | Increase brightness |
-| Rotate **counter-clockwise** | Decrease brightness |
-| `move_to_level` (fallback) | Set brightness directly |
+| Action | Event type | Result |
+|---|---|---|
+| Press wheel | `single_press` | Toggle light on / off |
+| Rotate **clockwise** | `step_up` | Increase brightness |
+| Rotate **counter-clockwise** | `step_down` | Decrease brightness |
+| Absolute level (fallback) | `move_to_level` | Set brightness directly |
 
-Configurable inputs: remote device, target light, brightness step (%).
+Configurable inputs: scroll wheel event entity, target light, brightness step (%).
 
 ---
 
