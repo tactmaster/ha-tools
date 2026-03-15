@@ -92,7 +92,7 @@ action:
             target: !input light
 
       # ── Long press TOP → brightness UP (continuous while held) ───────────
-      # Repeats every 500 ms until long_release re-triggers the automation
+      # Repeats every 100 ms until long_release re-triggers the automation
       # and mode:restart cancels this running instance.
       - conditions:
           - condition: trigger
@@ -101,14 +101,14 @@ action:
             value_template: "{{ event_type == 'long_press' }}"
         sequence:
           - repeat:
-              count: 30
+              count: 150
               sequence:
                 - service: light.turn_on
                   target: !input light
                   data:
                     brightness_step_pct: "{{ step | int }}"
                 - delay:
-                    milliseconds: 500
+                    milliseconds: 100
 
       # ── Single press BOTTOM → turn off ────────────────────────────────────
       - conditions:
@@ -121,7 +121,7 @@ action:
             target: !input light
 
       # ── Long press BOTTOM → brightness DOWN (continuous while held) ──────
-      # Repeats every 500 ms until long_release re-triggers the automation
+      # Repeats every 100 ms until long_release re-triggers the automation
       # and mode:restart cancels this running instance.
       - conditions:
           - condition: trigger
@@ -130,11 +130,11 @@ action:
             value_template: "{{ event_type == 'long_press' }}"
         sequence:
           - repeat:
-              count: 30
+              count: 150
               sequence:
                 - service: light.turn_on
                   target: !input light
                   data:
                     brightness_step_pct: "{{ (step | int) * -1 }}"
                 - delay:
-                    milliseconds: 500
+                    milliseconds: 100
