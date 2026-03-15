@@ -18,12 +18,12 @@ Controls a single light with the IKEA BILRESA two-button remote paired via **Mat
 The BILRESA exposes **two** `event` entities in HA — one per physical button.
 Select each entity in the blueprint inputs.
 
-| Action | Result |
-|---|---|
-| Short press **top** button | Toggle light on / off |
-| Short press **bottom** button | Turn light off |
-| Long press **top** button | Increase brightness |
-| Long press **bottom** button | Decrease brightness |
+| Action | Event type | Result |
+|---|---|---|
+| Single press **top** button | `multi_press_1` | Toggle light on / off |
+| Single press **bottom** button | `multi_press_1` | Turn light off |
+| Long press **top** button | `long_press` | Increase brightness |
+| Long press **bottom** button | `long_press` | Decrease brightness |
 
 Configurable inputs: top button event entity, bottom button event entity, target light, brightness step (%).
 
@@ -39,7 +39,7 @@ Level Control command `step_with_on_off`, action code **32768 / 0x8000**).
 
 | Action | Event type | Result |
 |---|---|---|
-| Press wheel | `single_press` | Toggle light on / off |
+| Press wheel | `multi_press_1` | Toggle light on / off |
 | Rotate **clockwise** | `step_up` | Increase brightness |
 | Rotate **counter-clockwise** | `step_down` | Decrease brightness |
 | Absolute level (fallback) | `move_to_level` | Set brightness directly |

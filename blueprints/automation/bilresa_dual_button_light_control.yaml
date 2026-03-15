@@ -6,8 +6,15 @@ blueprint:
     The BILRESA remote exposes **two** event entities in Home Assistant
     (one per physical button).  Select each entity in the inputs below.
 
-    - **Short press top button** → toggle light on/off
-    - **Short press bottom button** → turn light off
+    Each button fires these event types:
+    - `multi_press_1` — single press
+    - `multi_press_2` — double press
+    - `long_press` — long press (held)
+    - `long_release` — released after long press
+
+    Actions mapped by this blueprint:
+    - **Single press top button** → toggle light on/off
+    - **Single press bottom button** → turn light off
     - **Long press top button** → increase brightness by the configured step
     - **Long press bottom button** → decrease brightness by the configured step
   domain: automation
@@ -69,17 +76,17 @@ trigger:
 
 action:
   - variables:
-      # The event_type attribute holds the action name (e.g. "single_press").
+      # The event_type attribute holds the action name (e.g. "multi_press_1").
       event_type: "{{ trigger.to_state.attributes.event_type | default('') }}"
       step: !input brightness_step_pct
 
   - choose:
-      # ── Short press TOP → toggle ───────────────────────────────────────────
+      # ── Single press TOP → toggle ─────────────────────────────────────────
       - conditions:
           - condition: trigger
             id: top
           - condition: template
-            value_template: "{{ event_type == 'single_press' }}"
+            value_template: "{{ event_type == 'multi_press_1' }}"
         sequence:
           - service: light.toggle
             target: !input light
@@ -96,12 +103,12 @@ action:
             data:
               brightness_step_pct: "{{ step | int }}"
 
-      # ── Short press BOTTOM → turn off ─────────────────────────────────────
+      # ── Single press BOTTOM → turn off ────────────────────────────────────
       - conditions:
           - condition: trigger
             id: bottom
           - condition: template
-            value_template: "{{ event_type == 'single_press' }}"
+            value_template: "{{ event_type == 'multi_press_1' }}"
         sequence:
           - service: light.turn_off
             target: !input light

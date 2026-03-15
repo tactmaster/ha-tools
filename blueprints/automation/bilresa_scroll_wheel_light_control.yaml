@@ -6,7 +6,7 @@ blueprint:
     The BILRESA scroll wheel exposes a single **event entity** in Home Assistant.
     It fires different `event_type` values depending on the physical action:
 
-    - **Press wheel** → `single_press` → toggle light on/off
+    - **Press wheel** → `multi_press_1` → toggle light on/off
     - **Rotate clockwise** → `step_up` → increase brightness
     - **Rotate counter-clockwise** → `step_down` → decrease brightness
 
@@ -67,7 +67,7 @@ action:
       # ── Press wheel → toggle ───────────────────────────────────────────────
       - conditions:
           - condition: template
-            value_template: "{{ event_type == 'single_press' }}"
+            value_template: "{{ event_type == 'multi_press_1' }}"
         sequence:
           - service: light.toggle
             target: !input light
