@@ -91,17 +91,24 @@ action:
           - service: light.toggle
             target: !input light
 
-      # ── Long press TOP → brightness UP ────────────────────────────────────
+      # ── Long press TOP → brightness UP (continuous while held) ───────────
+      # Repeats every 500 ms until long_release re-triggers the automation
+      # and mode:restart cancels this running instance.
       - conditions:
           - condition: trigger
             id: top
           - condition: template
             value_template: "{{ event_type == 'long_press' }}"
         sequence:
-          - service: light.turn_on
-            target: !input light
-            data:
-              brightness_step_pct: "{{ step | int }}"
+          - repeat:
+              count: 30
+              sequence:
+                - service: light.turn_on
+                  target: !input light
+                  data:
+                    brightness_step_pct: "{{ step | int }}"
+                - delay:
+                    milliseconds: 500
 
       # ── Single press BOTTOM → turn off ────────────────────────────────────
       - conditions:
@@ -113,14 +120,21 @@ action:
           - service: light.turn_off
             target: !input light
 
-      # ── Long press BOTTOM → brightness DOWN ───────────────────────────────
+      # ── Long press BOTTOM → brightness DOWN (continuous while held) ──────
+      # Repeats every 500 ms until long_release re-triggers the automation
+      # and mode:restart cancels this running instance.
       - conditions:
           - condition: trigger
             id: bottom
           - condition: template
             value_template: "{{ event_type == 'long_press' }}"
         sequence:
-          - service: light.turn_on
-            target: !input light
-            data:
-              brightness_step_pct: "{{ (step | int) * -1 }}"
+          - repeat:
+              count: 30
+              sequence:
+                - service: light.turn_on
+                  target: !input light
+                  data:
+                    brightness_step_pct: "{{ (step | int) * -1 }}"
+                - delay:
+                    milliseconds: 500
