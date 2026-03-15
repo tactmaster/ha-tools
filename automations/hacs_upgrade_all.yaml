@@ -2,7 +2,7 @@
 #
 # This automation runs every night at 03:00 and installs every pending
 # HACS update that is represented as a Home Assistant "update" entity
-# (requires HA 2022.4+ and HACS 1.26+).
+# (requires HA 2022.5+ and HACS 2.0+).
 #
 # Usage
 # -----
@@ -14,9 +14,10 @@
 #
 # Prerequisites
 # -------------
-# • HACS installed and at least one repository managed by it.
+# • HACS 2.0+ installed and at least one repository managed by it.
 # • The HACS integration must expose "update" entities.  Verify in
 #   Settings → Devices & Services → Entities (filter domain: update).
+# • Requires HA 2022.5+ for the integration_entities() template function.
 
 alias: HACS – Upgrade All
 description: >
@@ -31,16 +32,16 @@ trigger:
 condition: []
 
 action:
-  # Step 1 – Refresh all update entities so their state reflects the
+  # Step 1 – Refresh all HACS update entities so their state reflects the
   #          latest available versions before we decide what to install.
+  #
+  #          Uses integration_entities('hacs') (HA 2022.5+) — reliable in
+  #          HACS 2.0 because the old attributes.integration attribute was
+  #          removed in that release.
   - service: homeassistant.update_entity
     target:
       entity_id: >
-        {{ states.update
-           | selectattr('attributes.integration', 'defined')
-           | selectattr('attributes.integration', 'eq', 'hacs')
-           | map(attribute='entity_id')
-           | list }}
+        {{ integration_entities('hacs') | select('match', 'update\.') | list }}
 
   # Brief pause to let the refresh settle.
   - delay:
@@ -50,11 +51,9 @@ action:
   #          "on" (meaning an update is available and ready to install).
   - variables:
       pending_updates: >
-        {{ states.update
-           | selectattr('attributes.integration', 'defined')
-           | selectattr('attributes.integration', 'eq', 'hacs')
-           | selectattr('state', 'eq', 'on')
-           | map(attribute='entity_id')
+        {{ integration_entities('hacs')
+           | select('match', 'update\.')
+           | select('is_state', 'on')
            | list }}
 
   # Step 3 – Only proceed when there is at least one pending update.
