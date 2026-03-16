@@ -1,0 +1,142 @@
+blueprint:
+  name: "IKEA BILRESA Dual Button – Light Control (Matter)"
+  description: >
+    Control a light with the IKEA BILRESA dual-button remote via Matter.
+
+    The BILRESA remote exposes **two** event entities in Home Assistant
+    (one per physical button).  Select each entity in the inputs below.
+
+    Each button fires these event types:
+    - `multi_press_1` — single press
+    - `multi_press_2` — double press
+    - `long_press` — long press (held)
+    - `long_release` — released after long press
+
+    Actions mapped by this blueprint:
+    - **Single press top button** → toggle light on/off
+    - **Single press bottom button** → turn light off
+    - **Long press top button** → increase brightness by the configured step
+    - **Long press bottom button** → decrease brightness by the configured step
+  domain: automation
+  source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_dual_button_light_control.yaml
+  input:
+    button_top:
+      name: Top Button (event entity)
+      description: >
+        The event entity for the **top** button on the BILRESA remote.
+        In Home Assistant go to Settings → Devices & Services → your BILRESA
+        device → find the event entity labelled "Button 1" (or similar) and
+        select it here.
+      selector:
+        entity:
+          domain: event
+
+    button_bottom:
+      name: Bottom Button (event entity)
+      description: >
+        The event entity for the **bottom** button on the BILRESA remote.
+        Typically labelled "Button 2" (or similar) in the device page.
+      selector:
+        entity:
+          domain: event
+
+    light:
+      name: Light
+      description: The light (or light group) to control.
+      selector:
+        target:
+          entity:
+            domain: light
+
+    brightness_step_pct:
+      name: Brightness Step (%)
+      description: >
+        How many percentage points the brightness changes on each long-press
+        event (default 10 %).
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          unit_of_measurement: "%"
+          mode: slider
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  # Matter button events arrive as state-changes on the event entity.
+  - platform: state
+    entity_id: !input button_top
+    id: top
+
+  - platform: state
+    entity_id: !input button_bottom
+    id: bottom
+
+action:
+  - variables:
+      step: !input brightness_step_pct
+
+  - choose:
+      # ── Single press TOP → toggle ─────────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: top
+          - condition: template
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'multi_press_1' }}
+        sequence:
+          - service: light.toggle
+            target: !input light
+
+      # ── Long press TOP → brightness UP (continuous while held) ───────────
+      # Repeats every 100 ms until long_release re-triggers the automation
+      # and mode:restart cancels this running instance.
+      - conditions:
+          - condition: trigger
+            id: top
+          - condition: template
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'long_press' }}
+        sequence:
+          - repeat:
+              count: 150
+              sequence:
+                - service: light.turn_on
+                  target: !input light
+                  data:
+                    brightness_step_pct: "{{ step | int }}"
+                - delay:
+                    milliseconds: 100
+
+      # ── Single press BOTTOM → turn off ────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: bottom
+          - condition: template
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'multi_press_1' }}
+        sequence:
+          - service: light.turn_off
+            target: !input light
+
+      # ── Long press BOTTOM → brightness DOWN (continuous while held) ──────
+      # Repeats every 100 ms until long_release re-triggers the automation
+      # and mode:restart cancels this running instance.
+      - conditions:
+          - condition: trigger
+            id: bottom
+          - condition: template
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'long_press' }}
+        sequence:
+          - repeat:
+              count: 150
+              sequence:
+                - service: light.turn_on
+                  target: !input light
+                  data:
+                    brightness_step_pct: "{{ (step | int) * -1 }}"
+                - delay:
+                    milliseconds: 100

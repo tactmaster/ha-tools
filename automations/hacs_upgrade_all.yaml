@@ -1,0 +1,107 @@
+# Automation: HACS & Add-ons – Upgrade All Pending Updates
+#
+# This automation runs every night at 03:00 and installs every pending
+# HACS update and every pending Home Assistant Supervisor add-on update
+# that is represented as a Home Assistant "update" entity
+# (requires HA 2022.5+ and HACS 2.0+).
+#
+# Usage
+# -----
+# Copy this file to your <config>/automations/ directory and reload
+# automations, OR paste its contents into the Automations UI editor.
+#
+# The automation can also be triggered manually from the Developer Tools →
+# Services panel or from the Automation card in the UI.
+#
+# Prerequisites
+# -------------
+# • HACS 2.0+ installed and at least one repository managed by it.
+# • The HACS integration must expose "update" entities.  Verify in
+#   Settings → Devices & Services → Entities (filter domain: update).
+# • For add-on updates: Home Assistant OS or Supervised install with the
+#   Supervisor ("hassio") integration active.
+# • Requires HA 2022.5+ for the integration_entities() template function.
+
+alias: HACS & Add-ons – Upgrade All
+description: >
+  Install every pending HACS update and every pending Supervisor add-on
+  update automatically each night.
+  Can also be triggered manually at any time.
+
+trigger:
+  # Runs automatically every night at 03:00 local time.
+  - platform: time
+    at: "03:00:00"
+
+condition: []
+
+action:
+  # Step 1 – Refresh all HACS update entities so their state reflects the
+  #          latest available versions before we decide what to install.
+  #
+  #          Uses integration_entities('hacs') (HA 2022.5+) — reliable in
+  #          HACS 2.0 because the old attributes.integration attribute was
+  #          removed in that release.
+  - service: homeassistant.update_entity
+    target:
+      entity_id: >
+        {{ integration_entities('hacs') | select('match', 'update\.') | list }}
+
+  # Step 1b – Refresh all Supervisor add-on update entities.
+  #           Uses integration_entities('hassio') which covers all add-ons
+  #           managed by the Home Assistant Supervisor.
+  - service: homeassistant.update_entity
+    continue_on_error: true
+    target:
+      entity_id: >
+        {{ integration_entities('hassio') | select('match', 'update\.') | list }}
+
+  # Brief pause to let the refresh settle.
+  - delay:
+      seconds: 5
+
+  # Step 2 – Collect the entity IDs of all HACS updates AND Supervisor
+  #          add-on updates whose state is "on" (meaning an update is
+  #          available and ready to install).
+  - variables:
+      pending_updates: >
+        {{ (
+             integration_entities('hacs')
+             | select('match', 'update\.')
+             | select('is_state', 'on')
+             | list
+           ) + (
+             integration_entities('hassio')
+             | select('match', 'update\.')
+             | select('is_state', 'on')
+             | list
+           ) }}
+
+  # Step 3 – Only proceed when there is at least one pending update.
+  - condition: template
+    value_template: "{{ pending_updates | length > 0 }}"
+
+  # Step 4 – Log what we are about to install (visible in the HA log and
+  #          in the Automation trace).
+  - service: system_log.write
+    data:
+      message: >
+        HACS & add-on upgrade-all: installing {{ pending_updates | length }} update(s):
+        {{ pending_updates | join(', ') }}
+      level: info
+
+  # Step 5 – Install each pending update one by one so that a failure in
+  #          one repository does not block the others.
+  - repeat:
+      for_each: "{{ pending_updates }}"
+      sequence:
+        - service: update.install
+          continue_on_error: true
+          target:
+            entity_id: "{{ repeat.item }}"
+        # Small delay between installs to avoid overwhelming HACS / GitHub.
+        - delay:
+            seconds: 3
+
+mode: single
+max_exceeded: silent
