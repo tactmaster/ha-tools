@@ -3,38 +3,40 @@ blueprint:
   description: >
     Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via Matter.
 
-    The BILRESA scroll wheel exposes **two** event entities in Home Assistant:
+    The BILRESA scroll wheel exposes **two** event entities in Home Assistant via
+    the Matter integration — one per rotation direction — both labelled "Button (N)".
+    Each entity fires `multi_press_N` events where N is the number of rotation steps.
 
-    1. **Rotation entity** — fires `step_up` / `step_down` as you turn the wheel.
-       This is the entity you must select below.
-    2. **Button entity** (labelled "Button (1)") — fires `multi_press_1` … `multi_press_8`
-       when you physically press/click the wheel.  **Do NOT select this one.**
+    Go to Settings → Devices & Services → your BILRESA device to find both event
+    entities.  You will need to test which is clockwise and which is counter-clockwise
+    by rotating the wheel and checking which entity fires in Developer Tools → Events
+    (filter on `state_changed` and watch the `event_type` attribute).
 
-    To find the correct entity go to Settings → Devices & Services → your BILRESA
-    device and open the device page.  Look for the event entity whose **event types**
-    list includes `step_up` and `step_down` (not `multi_press_1`/`multi_press_2` etc.).
-
-    Actions handled:
-
-    - **Rotate clockwise** → `step_up` → increase brightness by step
-    - **Rotate counter-clockwise** → `step_down` → decrease brightness by step
-    - **Press wheel** → `multi_press_1` → toggle light on/off
-
-    > **Note on action code 32768:** In ZHA/Zigbee this corresponds to the
-    > Level Control cluster command `step_with_on_off` (0x8000).  Via the
-    > Matter integration Home Assistant maps this to the `step_up` event type
-    > on the rotation event entity.
+    | Entity | Event type | Action |
+    |---|---|---|
+    | CW / Button entity | `multi_press_1` | `light.toggle` (center-button press) |
+    | CW / Button entity | `multi_press_N` (N > 1) | brightness **up** by N × step % |
+    | CCW entity | `multi_press_N` | brightness **down** by N × step % |
   domain: automation
   source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_scroll_wheel_light_control.yaml
   input:
-    wheel_entity:
-      name: Scroll Wheel Rotation Event Entity
+    cw_entity:
+      name: Clockwise / Button Press Event Entity
       description: >
-        The **rotation** event entity for the BILRESA scroll wheel (NOT the button
-        entity).  The correct entity has event types `step_up` and `step_down` in
-        its attributes.  If you see only `multi_press_1`, `multi_press_2`, etc. you
-        have selected the button entity — go back and pick the other event entity on
-        the device.
+        The event entity for **clockwise** rotation and the **center button press**.
+        This entity fires `multi_press_1` for a single button press (toggle) and
+        `multi_press_N` (N > 1) for N clockwise scroll steps.
+        Typically labelled "Button (1)" on the device page.
+      selector:
+        entity:
+          domain: event
+
+    ccw_entity:
+      name: Counter-clockwise Rotation Event Entity
+      description: >
+        The event entity for **counter-clockwise** rotation.
+        This entity fires `multi_press_N` for N counter-clockwise scroll steps.
+        Typically labelled "Button (2)" on the device page.
       selector:
         entity:
           domain: event
@@ -51,7 +53,8 @@ blueprint:
       name: Brightness Step (%)
       description: >
         How many percentage points the brightness changes per scroll step
-        (default 10 %).
+        (default 10 %).  The total change is multiplied by the number of steps
+        rotated, so scrolling 3 notches changes brightness by 3 × this value.
       default: 10
       selector:
         number:
@@ -64,28 +67,58 @@ mode: restart
 max_exceeded: silent
 
 trigger:
-  # Matter button/level events arrive as state-changes on the event entity.
   - platform: state
-    entity_id: !input wheel_entity
+    entity_id: !input cw_entity
+    id: cw
+  - platform: state
+    entity_id: !input ccw_entity
+    id: ccw
 
 action:
   - variables:
-      # The event_type attribute holds the action name (e.g. "step_up").
       event_type: "{{ trigger.to_state.attributes.event_type | default('') }}"
+      # totalNumberOfPressesCounted encodes the number of scroll steps rotated.
+      press_count: >
+        {{ trigger.to_state.attributes.totalNumberOfPressesCounted | default(1) | int }}
       step: !input brightness_step_pct
 
   - choose:
-      # ── Press wheel → toggle ───────────────────────────────────────────────
+      # ── CW entity: single press → toggle ──────────────────────────────────
       - conditions:
+          - condition: trigger
+            id: cw
           - condition: template
             value_template: "{{ event_type == 'multi_press_1' }}"
         sequence:
           - service: light.toggle
             target: !input light
 
-      # ── Rotate clockwise → brightness UP ──────────────────────────────────
-      # Matter maps the Level Control "step_with_on_off" command (action code
-      # 0x8000 / 32768) to the "step_up" event type in HA.
+      # ── CW entity: N > 1 steps → brightness UP ────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: cw
+          - condition: template
+            value_template: >
+              {{ event_type is match('multi_press_\\d+') and press_count > 1 }}
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ press_count * (step | int) }}"
+
+      # ── CCW entity: any multi_press → brightness DOWN ──────────────────────
+      - conditions:
+          - condition: trigger
+            id: ccw
+          - condition: template
+            value_template: "{{ event_type is match('multi_press_\\d+') }}"
+        sequence:
+          - service: light.turn_on
+            target: !input light
+            data:
+              brightness_step_pct: "{{ (press_count * (step | int)) * -1 }}"
+
+      # ── step_up fallback (older firmware) ─────────────────────────────────
       - conditions:
           - condition: template
             value_template: "{{ event_type in ['step_up', 'step_with_on_off'] }}"
@@ -95,8 +128,7 @@ action:
             data:
               brightness_step_pct: "{{ step | int }}"
 
-      # ── Rotate counter-clockwise → brightness DOWN ────────────────────────
-      # Matter maps the Level Control "step" (down) command to "step_down".
+      # ── step_down fallback (older firmware) ───────────────────────────────
       - conditions:
           - condition: template
             value_template: "{{ event_type in ['step_down', 'step'] }}"
@@ -105,17 +137,3 @@ action:
             target: !input light
             data:
               brightness_step_pct: "{{ (step | int) * -1 }}"
-
-      # ── move_to_level fallback ─────────────────────────────────────────────
-      # Some firmware versions send a discrete level value directly.
-      # The level attribute (0–254) is mapped to HA brightness (0–255).
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type in ['move_to_level', 'move_to_level_with_on_off'] }}"
-        sequence:
-          - service: light.turn_on
-            target: !input light
-            data:
-              brightness: >
-                {{ (trigger.to_state.attributes.get('level',
-                    trigger.to_state.attributes.get('Level', 0)) | int) }}
