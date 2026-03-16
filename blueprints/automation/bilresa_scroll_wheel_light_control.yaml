@@ -3,27 +3,38 @@ blueprint:
   description: >
     Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via Matter.
 
-    The BILRESA scroll wheel exposes a single **event entity** in Home Assistant.
-    It fires different `event_type` values depending on the physical action:
+    The BILRESA scroll wheel exposes **two** event entities in Home Assistant:
 
+    1. **Rotation entity** — fires `step_up` / `step_down` as you turn the wheel.
+       This is the entity you must select below.
+    2. **Button entity** (labelled "Button (1)") — fires `multi_press_1` … `multi_press_8`
+       when you physically press/click the wheel.  **Do NOT select this one.**
+
+    To find the correct entity go to Settings → Devices & Services → your BILRESA
+    device and open the device page.  Look for the event entity whose **event types**
+    list includes `step_up` and `step_down` (not `multi_press_1`/`multi_press_2` etc.).
+
+    Actions handled:
+
+    - **Rotate clockwise** → `step_up` → increase brightness by step
+    - **Rotate counter-clockwise** → `step_down` → decrease brightness by step
     - **Press wheel** → `multi_press_1` → toggle light on/off
-    - **Rotate clockwise** → `step_up` → increase brightness
-    - **Rotate counter-clockwise** → `step_down` → decrease brightness
 
     > **Note on action code 32768:** In ZHA/Zigbee this corresponds to the
     > Level Control cluster command `step_with_on_off` (0x8000).  Via the
     > Matter integration Home Assistant maps this to the `step_up` event type
-    > on the event entity.
+    > on the rotation event entity.
   domain: automation
   source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_scroll_wheel_light_control.yaml
   input:
     wheel_entity:
-      name: Scroll Wheel Event Entity
+      name: Scroll Wheel Rotation Event Entity
       description: >
-        The event entity for the BILRESA scroll wheel exposed by the Matter
-        integration.  In Home Assistant go to Settings → Devices & Services →
-        your BILRESA device and select the event entity (typically labelled
-        "Dimmer" or "Scroll Wheel").
+        The **rotation** event entity for the BILRESA scroll wheel (NOT the button
+        entity).  The correct entity has event types `step_up` and `step_down` in
+        its attributes.  If you see only `multi_press_1`, `multi_press_2`, etc. you
+        have selected the button entity — go back and pick the other event entity on
+        the device.
       selector:
         entity:
           domain: event
