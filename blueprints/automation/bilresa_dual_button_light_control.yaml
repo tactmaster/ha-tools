@@ -76,8 +76,6 @@ trigger:
 
 action:
   - variables:
-      # The event_type attribute holds the action name (e.g. "multi_press_1").
-      event_type: "{{ trigger.to_state.attributes.event_type | default('') }}"
       step: !input brightness_step_pct
 
   - choose:
@@ -86,7 +84,8 @@ action:
           - condition: trigger
             id: top
           - condition: template
-            value_template: "{{ event_type == 'multi_press_1' }}"
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'multi_press_1' }}
         sequence:
           - service: light.toggle
             target: !input light
@@ -98,7 +97,8 @@ action:
           - condition: trigger
             id: top
           - condition: template
-            value_template: "{{ event_type == 'long_press' }}"
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'long_press' }}
         sequence:
           - repeat:
               count: 150
@@ -115,7 +115,8 @@ action:
           - condition: trigger
             id: bottom
           - condition: template
-            value_template: "{{ event_type == 'multi_press_1' }}"
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'multi_press_1' }}
         sequence:
           - service: light.turn_off
             target: !input light
@@ -127,7 +128,8 @@ action:
           - condition: trigger
             id: bottom
           - condition: template
-            value_template: "{{ event_type == 'long_press' }}"
+            value_template: >-
+              {{ trigger.to_state.attributes.event_type | default('') == 'long_press' }}
         sequence:
           - repeat:
               count: 150
