@@ -3,30 +3,36 @@ blueprint:
   description: >
     Control a light with the IKEA BILRESA scroll-wheel (dimmer) remote via Matter.
 
-    The BILRESA scroll wheel exposes **two** event entities in Home Assistant via
-    the Matter integration — one per rotation direction — both labelled "Button (N)".
-    Each entity fires `multi_press_N` events where N is the number of rotation steps.
+    The BILRESA scroll wheel exposes **three** event entities in Home Assistant via
+    the Matter integration, all labelled "Button (N)". They come in groups of three;
+    you need the most recently active group.
 
-    Go to Settings → Devices & Services → your BILRESA device to find both event
-    entities.  You will need to test which is clockwise and which is counter-clockwise
-    by rotating the wheel and checking which entity fires in Developer Tools → Events
-    (filter on `state_changed` and watch the `event_type` attribute).
+    **Finding the correct entities:**
+    1. Go to Settings → Devices & Services → your BILRESA device page.
+    2. The device lists multiple "Button (N)" entities. Find the three most recently
+       active ones by interacting with the wheel and checking which entities show
+       the newest timestamp.
+    3. Rotate the wheel clockwise a few steps — note which entity just updated;
+       that is your **CW rotation** entity.
+    4. Rotate counter-clockwise — that entity is your **CCW rotation** entity.
+    5. Press the center button — that entity is your **Center button** entity.
+    6. You can also use Developer Tools → States, search for your BILRESA device,
+       and watch which entities change as you interact with the wheel.
 
     | Entity | Event type | Action |
     |---|---|---|
-    | CW / Button entity | `multi_press_1` | `light.toggle` (center-button press) |
-    | CW / Button entity | `multi_press_N` (N > 1) | brightness **up** by N × step % |
-    | CCW entity | `multi_press_N` | brightness **down** by N × step % |
+    | CW rotation entity | `multi_press_N` | brightness **up** by N × step % |
+    | CCW rotation entity | `multi_press_N` | brightness **down** by N × step % |
+    | Center button entity | `multi_press_1` | `light.toggle` |
   domain: automation
   source_url: https://github.com/tactmaster/ha-tools/blob/main/blueprints/automation/bilresa_scroll_wheel_light_control.yaml
   input:
     cw_entity:
-      name: Clockwise / Button Press Event Entity
+      name: Clockwise Rotation Event Entity
       description: >
-        The event entity for **clockwise** rotation and the **center button press**.
-        This entity fires `multi_press_1` for a single button press (toggle) and
-        `multi_press_N` (N > 1) for N clockwise scroll steps.
-        Typically labelled "Button (1)" on the device page.
+        The event entity that fires when you rotate the wheel **clockwise**.
+        It fires `multi_press_N` where N is the number of steps rotated.
+        Find it by rotating CW and checking which Button entity just updated.
       selector:
         entity:
           domain: event
@@ -34,9 +40,19 @@ blueprint:
     ccw_entity:
       name: Counter-clockwise Rotation Event Entity
       description: >
-        The event entity for **counter-clockwise** rotation.
-        This entity fires `multi_press_N` for N counter-clockwise scroll steps.
-        Typically labelled "Button (2)" on the device page.
+        The event entity that fires when you rotate the wheel **counter-clockwise**.
+        It fires `multi_press_N` where N is the number of steps rotated.
+        Find it by rotating CCW and checking which Button entity just updated.
+      selector:
+        entity:
+          domain: event
+
+    center_entity:
+      name: Center Button Event Entity
+      description: >
+        The event entity that fires when you **press the center button**.
+        It fires `multi_press_1` on a single press.
+        Find it by pressing the center button and checking which Button entity just updated.
       selector:
         entity:
           domain: event
@@ -73,6 +89,9 @@ trigger:
   - platform: state
     entity_id: !input ccw_entity
     id: ccw
+  - platform: state
+    entity_id: !input center_entity
+    id: center
 
 action:
   - variables:
@@ -81,59 +100,39 @@ action:
       press_count: >
         {{ trigger.to_state.attributes.totalNumberOfPressesCounted | default(1) | int }}
       step: !input brightness_step_pct
+      is_press_event: "{{ event_type is match('multi_press_\\d+') }}"
 
   - choose:
-      # ── CW entity: single press → toggle ──────────────────────────────────
+      # ── Center button: press → toggle ─────────────────────────────────────
       - conditions:
           - condition: trigger
-            id: cw
+            id: center
           - condition: template
-            value_template: "{{ event_type == 'multi_press_1' }}"
+            value_template: "{{ is_press_event }}"
         sequence:
           - service: light.toggle
             target: !input light
 
-      # ── CW entity: N > 1 steps → brightness UP ────────────────────────────
+      # ── CW entity: N steps → brightness UP ────────────────────────────────
       - conditions:
           - condition: trigger
             id: cw
           - condition: template
-            value_template: >
-              {{ event_type is match('multi_press_\\d+') and press_count > 1 }}
+            value_template: "{{ is_press_event }}"
         sequence:
           - service: light.turn_on
             target: !input light
             data:
               brightness_step_pct: "{{ press_count * (step | int) }}"
 
-      # ── CCW entity: any multi_press → brightness DOWN ──────────────────────
+      # ── CCW entity: N steps → brightness DOWN ─────────────────────────────
       - conditions:
           - condition: trigger
             id: ccw
           - condition: template
-            value_template: "{{ event_type is match('multi_press_\\d+') }}"
+            value_template: "{{ is_press_event }}"
         sequence:
           - service: light.turn_on
             target: !input light
             data:
               brightness_step_pct: "{{ (press_count * (step | int)) * -1 }}"
-
-      # ── step_up fallback (older firmware) ─────────────────────────────────
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type in ['step_up', 'step_with_on_off'] }}"
-        sequence:
-          - service: light.turn_on
-            target: !input light
-            data:
-              brightness_step_pct: "{{ step | int }}"
-
-      # ── step_down fallback (older firmware) ───────────────────────────────
-      - conditions:
-          - condition: template
-            value_template: "{{ event_type in ['step_down', 'step'] }}"
-        sequence:
-          - service: light.turn_on
-            target: !input light
-            data:
-              brightness_step_pct: "{{ (step | int) * -1 }}"
