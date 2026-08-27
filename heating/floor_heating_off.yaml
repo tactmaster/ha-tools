@@ -1,0 +1,27 @@
+# automation.floor_heating_off
+# alias      : Floor Heating Off
+# unique_id  : 1736024940221
+# state      : on
+# last_trig  : 2026-08-25T06:00:00.046391+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: switch.turn_off
+  data: {}
+  metadata: {}
+  target:
+    device_id:
+    - b1b0827d1652fadcbbd3851a803c7715
+    - 6d5793b89ba7e2a0b95eda8a4d6600cc
+alias: Floor Heating Off
+conditions: []
+description: ''
+id: '1736024940221'
+mode: single
+triggers:
+- entity_id:
+  - schedule.floor_heating
+  from: 'on'
+  to: 'off'
+  trigger: state

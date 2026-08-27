@@ -1,0 +1,27 @@
+# automation.utility_room_heater_off
+# alias      : Utility Room Heater Off
+# unique_id  : 1771861130485
+# state      : on
+# last_trig  : 2026-08-25T06:00:00.014505+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: climate.set_temperature
+  data:
+    temperature: 13
+  metadata: {}
+  target:
+    device_id: 7704d502b1af96c82c7b9f38329405e1
+alias: Utility Room Heater Off
+conditions: []
+description: ''
+id: '1771861130485'
+mode: single
+triggers:
+- entity_id:
+  - schedule.utility_room_floor_heating
+  from:
+  - 'on'
+  - 'off'
+  trigger: state

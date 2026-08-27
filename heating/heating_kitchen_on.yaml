@@ -1,0 +1,32 @@
+# automation.heating_kitchen_on
+# alias      : Heating - Kitchen On
+# unique_id  : 1668884960378
+# state      : on
+# last_trig  : 2026-05-04T15:00:00.086097+00:00
+# mode       : single
+# label      : heating
+
+action:
+- data: {}
+  service: climate.turn_on
+  target:
+    device_id: c1ba82e7f68799b1567d1fca114b267b
+- data:
+    hvac_mode: heat
+    temperature: 18
+  service: climate.set_temperature
+  target:
+    device_id: c1ba82e7f68799b1567d1fca114b267b
+alias: Heating - Kitchen On
+condition:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1668884960378'
+mode: single
+trigger:
+- entity_id:
+  - schedule.heating_kitchen
+  platform: state
+  to: 'on'

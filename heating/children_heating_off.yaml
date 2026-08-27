@@ -1,0 +1,28 @@
+# automation.children_heating_off
+# alias      : Children Heating Off
+# unique_id  : 1701153573114
+# state      : on
+# last_trig  : 2026-05-04T05:30:00.049465+00:00
+# mode       : single
+# label      : heating
+
+action:
+- data: {}
+  service: climate.turn_off
+  target:
+    device_id:
+    - c077980f02fa37ca89176837ee6d3a5f
+    - eb8e98dadcd8e4912dae1c1e683886da
+alias: Children Heating Off
+condition:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1701153573114'
+mode: single
+trigger:
+- entity_id:
+  - schedule.children_evening_heating
+  platform: state
+  to: 'off'

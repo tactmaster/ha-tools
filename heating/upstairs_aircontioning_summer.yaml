@@ -1,0 +1,64 @@
+# automation.upstairs_aircontioning_summer
+# alias      : Upstairs Aircontioning Summer
+# unique_id  : 1780291888015
+# state      : on
+# last_trig  : 2026-08-24T21:37:04.807712+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: climate.set_hvac_mode
+  data:
+    hvac_mode: cool
+  metadata: {}
+  target:
+    floor_id: upstairs
+- action: climate.set_temperature
+  data:
+    hvac_mode: cool
+    temperature: 20
+  metadata: {}
+  target:
+    floor_id: upstairs
+- action: climate.turn_on
+  data: {}
+  metadata: {}
+  target:
+    area_id: 519057430ed511eb96b8b564b4c2a971
+- action: climate.turn_on
+  data: {}
+  metadata: {}
+  target:
+    device_id: 9f2b20efb917dd436d983286c23118c0
+alias: Upstairs Aircontioning Summer
+conditions:
+- condition: select.is_option_selected
+  options:
+    behavior: any
+    for: 00:00:00
+    option:
+    - Summer
+  target:
+    entity_id: input_select.season
+description: ''
+id: '1780291888015'
+mode: single
+triggers:
+- options:
+    behavior: any
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+    threshold:
+      type: above
+      value:
+        active_choice: number
+        number: 23
+        unit_of_measurement: °C
+  target:
+    area_id: 519057430ed511eb96b8b564b4c2a971
+    entity_id:
+    - sensor.atc_ed38_temperature
+    - sensor.spare_room_sensor_temperature
+  trigger: temperature.crossed_threshold

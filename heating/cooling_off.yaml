@@ -1,0 +1,36 @@
+# automation.cooling_off
+# alias      : Cooling off
+# unique_id  : 1786951767837
+# state      : on
+# last_trig  : None
+# mode       : single
+# label      : heating
+
+id: '1786951767837'
+alias: Cooling off
+description: ''
+triggers:
+- trigger: climate.target_temperature_crossed_threshold
+  target:
+    floor_id: upstairs
+  options:
+    behavior: all
+    threshold:
+      type: below
+      value:
+        active_choice: number
+        number: 20
+        unit_of_measurement: °C
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+conditions: []
+actions:
+- action: climate.set_hvac_mode
+  metadata: {}
+  target:
+    device_id: 80bc33c157b275fd4b4fab1b202ed00a
+  data:
+    hvac_mode: 'off'
+mode: single

@@ -1,0 +1,34 @@
+# automation.new_automation_3
+# alias      : Heating - Working Off
+# unique_id  : 1760351039610
+# state      : on
+# last_trig  : 2026-05-04T13:30:00.159484+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: climate.set_temperature
+  data:
+    hvac_mode: heat_cool
+    temperature: 20
+  metadata: {}
+  target:
+    device_id: 9f2b20efb917dd436d983286c23118c0
+- device_id: b1b0827d1652fadcbbd3851a803c7715
+  domain: switch
+  entity_id: f8aee990c032884a19ab1cbf35190f4c
+  type: turn_off
+alias: Heating - Working Off
+conditions:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1760351039610'
+mode: single
+triggers:
+- entity_id:
+  - schedule.working
+  from: 'on'
+  to: 'off'
+  trigger: state

@@ -1,0 +1,574 @@
+# All 19 automations labelled 'Heating'
+# Pulled 2026-08-17 from ha.edmundwatson.com (read-only GET)
+
+# ===== automation.wake_luftwarmer =====
+automation.wake_luftwarmer:
+  action:
+  - device_id: ed758bd99648417ea59bc7ed49bc5a3f
+    domain: climate
+    entity_id: climate.daikin
+    hvac_mode: heat
+    type: set_hvac_mode
+  - data:
+      fan_mode: '5'
+    service: climate.set_fan_mode
+    target:
+      device_id: ed758bd99648417ea59bc7ed49bc5a3f
+  - data: {}
+    service: climate.turn_on
+    target:
+      device_id: ed758bd99648417ea59bc7ed49bc5a3f
+  - data:
+      temperature: 18
+    service: climate.set_temperature
+    target:
+      device_id: ed758bd99648417ea59bc7ed49bc5a3f
+  alias: Heating - Wake Luftwarmer
+  condition:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1664978776780'
+  mode: single
+  trigger:
+  - entity_id:
+    - schedule.wake_up_schedule
+    platform: state
+    to: 'on'
+
+# ===== automation.turn_off_lufty =====
+automation.turn_off_lufty:
+  action:
+  - data: {}
+    service: climate.turn_off
+    target:
+      device_id:
+      - ed758bd99648417ea59bc7ed49bc5a3f
+      - c1ba82e7f68799b1567d1fca114b267b
+  alias: Heating - Turn off Lufty
+  condition:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1664978971249'
+  mode: single
+  trigger:
+  - entity_id:
+    - schedule.wake_up_schedule
+    platform: state
+    to: 'off'
+
+# ===== automation.heating_children_evening_on =====
+automation.heating_children_evening_on:
+  action:
+  - data: {}
+    service: climate.turn_on
+    target:
+      device_id:
+      - c077980f02fa37ca89176837ee6d3a5f
+      - eb8e98dadcd8e4912dae1c1e683886da
+  - data:
+      hvac_mode: heat
+      temperature: 17
+    service: climate.set_temperature
+    target:
+      device_id:
+      - c077980f02fa37ca89176837ee6d3a5f
+      - eb8e98dadcd8e4912dae1c1e683886da
+  alias: Heating - Children Evening on
+  condition:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1666204831763'
+  mode: single
+  trigger:
+  - entity_id:
+    - schedule.children_evening_heating
+    platform: state
+    to: 'on'
+
+# ===== automation.heating_nighttime =====
+automation.heating_nighttime:
+  id: '1666210366047'
+  alias: 'Heating - Nighttime '
+  description: ''
+  triggers:
+  - entity_id:
+    - schedule.heating_night
+    to: 'on'
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  actions:
+  - delay:
+      hours: 0
+      milliseconds: 0
+      minutes: 0
+      seconds: 15
+  - action: climate.set_temperature
+    data:
+      hvac_mode: heat
+      temperature: 20
+    target:
+      device_id:
+      - d5574f4e3d430263327013652128fb62
+  - action: climate.set_fan_mode
+    data: {}
+    enabled: false
+    target:
+      device_id: d5574f4e3d430263327013652128fb62
+  mode: single
+
+# ===== automation.heating_morning_turn_off =====
+automation.heating_morning_turn_off:
+  id: '1666210680262'
+  alias: Heating - Morning Turn off
+  description: ''
+  triggers:
+  - entity_id:
+    - schedule.heating_night
+    to: 'off'
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  actions:
+  - data: {}
+    target:
+      device_id: d5574f4e3d430263327013652128fb62
+    action: climate.turn_off
+  mode: single
+
+# ===== automation.heating_kitchen_on =====
+automation.heating_kitchen_on:
+  action:
+  - data: {}
+    service: climate.turn_on
+    target:
+      device_id: c1ba82e7f68799b1567d1fca114b267b
+  - data:
+      hvac_mode: heat
+      temperature: 18
+    service: climate.set_temperature
+    target:
+      device_id: c1ba82e7f68799b1567d1fca114b267b
+  alias: Heating - Kitchen On
+  condition:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1668884960378'
+  mode: single
+  trigger:
+  - entity_id:
+    - schedule.heating_kitchen
+    platform: state
+    to: 'on'
+
+# ===== automation.heating_kitchen_turn_off =====
+automation.heating_kitchen_turn_off:
+  actions:
+  - action: climate.turn_off
+    data: {}
+  - action: climate.set_temperature
+    data:
+      hvac_mode: heat
+      temperature: 16
+    enabled: true
+    target:
+      device_id: c1ba82e7f68799b1567d1fca114b267b
+  alias: Heating - Kitchen Turn Off
+  conditions:
+  - condition: state
+    enabled: true
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1698994286911'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.heating_kitchen
+    to: 'off'
+    trigger: state
+
+# ===== automation.children_heating_off =====
+automation.children_heating_off:
+  action:
+  - data: {}
+    service: climate.turn_off
+    target:
+      device_id:
+      - c077980f02fa37ca89176837ee6d3a5f
+      - eb8e98dadcd8e4912dae1c1e683886da
+  alias: Children Heating Off
+  condition:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1701153573114'
+  mode: single
+  trigger:
+  - entity_id:
+    - schedule.children_evening_heating
+    platform: state
+    to: 'off'
+
+# ===== automation.heating_upstairs =====
+automation.heating_upstairs:
+  actions:
+  - device_id: ad5cc49e080ff2cbb1e26b1fd66b96f0
+    domain: switch
+    enabled: false
+    entity_id: f14af394c6c734d2127bcc36f2f424af
+    type: turn_off
+  - device_id: ad5cc49e080ff2cbb1e26b1fd66b96f0
+    domain: switch
+    enabled: false
+    entity_id: 5585732cd9da4453615f2a2d98fadd39
+    type: turn_on
+  alias: Heating Upstairs
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1705957561327'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.upstairs_heating
+    from: 'on'
+    to: 'off'
+    trigger: state
+  - entity_id:
+    - schedule.upstairs_heating
+    from: 'off'
+    to: 'on'
+    trigger: state
+
+# ===== automation.floor_heating_on =====
+automation.floor_heating_on:
+  actions:
+  - action: switch.turn_on
+    data: {}
+    metadata: {}
+    target:
+      device_id:
+      - 6d5793b89ba7e2a0b95eda8a4d6600cc
+      - b1b0827d1652fadcbbd3851a803c7715
+  alias: Floor Heating On
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1736024879431'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.floor_heating
+    from: 'off'
+    to: 'on'
+    trigger: state
+
+# ===== automation.floor_heating_off =====
+automation.floor_heating_off:
+  actions:
+  - action: switch.turn_off
+    data: {}
+    metadata: {}
+    target:
+      device_id:
+      - b1b0827d1652fadcbbd3851a803c7715
+      - 6d5793b89ba7e2a0b95eda8a4d6600cc
+  alias: Floor Heating Off
+  conditions: []
+  description: ''
+  id: '1736024940221'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.floor_heating
+    from: 'on'
+    to: 'off'
+    trigger: state
+
+# ===== automation.heating_working_on =====
+automation.heating_working_on:
+  actions:
+  - action: climate.set_temperature
+    data:
+      hvac_mode: heat_cool
+      temperature: 20
+    metadata: {}
+    target:
+      device_id: 9f2b20efb917dd436d983286c23118c0
+  - device_id: b1b0827d1652fadcbbd3851a803c7715
+    domain: switch
+    entity_id: f8aee990c032884a19ab1cbf35190f4c
+    type: turn_on
+  alias: Heating - Working On
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1760351004302'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.working
+    from: 'off'
+    to: 'on'
+    trigger: state
+
+# ===== automation.new_automation_3 =====
+automation.new_automation_3:
+  actions:
+  - action: climate.set_temperature
+    data:
+      hvac_mode: heat_cool
+      temperature: 20
+    metadata: {}
+    target:
+      device_id: 9f2b20efb917dd436d983286c23118c0
+  - device_id: b1b0827d1652fadcbbd3851a803c7715
+    domain: switch
+    entity_id: f8aee990c032884a19ab1cbf35190f4c
+    type: turn_off
+  alias: Heating - Working Off
+  conditions:
+  - condition: state
+    entity_id: input_boolean.heating
+    state: 'on'
+  description: ''
+  id: '1760351039610'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.working
+    from: 'on'
+    to: 'off'
+    trigger: state
+
+# ===== automation.new_automation_10 =====
+automation.new_automation_10:
+  actions:
+  - action: climate.set_temperature
+    data:
+      temperature: 18
+    metadata: {}
+    target:
+      device_id: 7704d502b1af96c82c7b9f38329405e1
+  alias: 'Utility Room Floor Heating '
+  conditions: []
+  description: ''
+  id: '1771861053460'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.utility_room_floor_heating
+    from:
+    - 'off'
+    - 'on'
+    trigger: state
+
+# ===== automation.utility_room_heater_off =====
+automation.utility_room_heater_off:
+  actions:
+  - action: climate.set_temperature
+    data:
+      temperature: 13
+    metadata: {}
+    target:
+      device_id: 7704d502b1af96c82c7b9f38329405e1
+  alias: Utility Room Heater Off
+  conditions: []
+  description: ''
+  id: '1771861130485'
+  mode: single
+  triggers:
+  - entity_id:
+    - schedule.utility_room_floor_heating
+    from:
+    - 'on'
+    - 'off'
+    trigger: state
+
+# ===== automation.upstairs_aircontioning_summer =====
+automation.upstairs_aircontioning_summer:
+  actions:
+  - action: climate.set_hvac_mode
+    data:
+      hvac_mode: cool
+    metadata: {}
+    target:
+      floor_id: upstairs
+  - action: climate.set_temperature
+    data:
+      hvac_mode: cool
+      temperature: 20
+    metadata: {}
+    target:
+      floor_id: upstairs
+  - action: climate.turn_on
+    data: {}
+    metadata: {}
+    target:
+      area_id: 519057430ed511eb96b8b564b4c2a971
+  - action: climate.turn_on
+    data: {}
+    metadata: {}
+    target:
+      device_id: 9f2b20efb917dd436d983286c23118c0
+  alias: Upstairs Aircontioning Summer
+  conditions:
+  - condition: select.is_option_selected
+    options:
+      behavior: any
+      for: 00:00:00
+      option:
+      - Summer
+    target:
+      entity_id: input_select.season
+  description: ''
+  id: '1780291888015'
+  mode: single
+  triggers:
+  - options:
+      behavior: any
+      for:
+        hours: 0
+        minutes: 10
+        seconds: 0
+      threshold:
+        type: above
+        value:
+          active_choice: number
+          number: 23
+          unit_of_measurement: °C
+    target:
+      area_id: 519057430ed511eb96b8b564b4c2a971
+      entity_id:
+      - sensor.atc_ed38_temperature
+      - sensor.spare_room_sensor_temperature
+    trigger: temperature.crossed_threshold
+
+# ===== automation.downstairs_ac =====
+automation.downstairs_ac:
+  actions:
+  - action: climate.set_temperature
+    data:
+      hvac_mode: cool
+      temperature: 20
+    metadata: {}
+    target:
+      area_id: 47afe5d17c374c55a761647e1afc5722
+  alias: 'Downstairs AC '
+  conditions:
+  - condition: select.is_option_selected
+    options:
+      behavior: any
+      for: 00:00:00
+      option:
+      - Summer
+    target:
+      entity_id: input_select.season
+  description: ''
+  id: '1780292112109'
+  mode: single
+  triggers:
+  - options:
+      behavior: any
+      for:
+        hours: 0
+        minutes: 10
+        seconds: 0
+      threshold:
+        type: above
+        value:
+          active_choice: number
+          number: 22
+          unit_of_measurement: °C
+    target:
+      entity_id:
+      - sensor.bens_room_bt_sensor_temperature
+      - sensor.bens_room_heater_temperature
+      - sensor.easyweatherv1_6_5_indoor_temperature
+      - sensor.ellies_room_bt_sensor_temperature
+      - sensor.downylufymund_inside_temperature
+    trigger: temperature.crossed_threshold
+
+# ===== automation.cooling_off =====
+automation.cooling_off:
+  id: '1786951767837'
+  alias: Cooling off
+  description: ''
+  triggers:
+  - trigger: climate.target_temperature_crossed_threshold
+    target:
+      floor_id: upstairs
+    options:
+      behavior: all
+      threshold:
+        type: below
+        value:
+          active_choice: number
+          number: 20
+          unit_of_measurement: °C
+      for:
+        hours: 0
+        minutes: 10
+        seconds: 0
+  conditions: []
+  actions:
+  - action: climate.set_hvac_mode
+    metadata: {}
+    target:
+      device_id: 80bc33c157b275fd4b4fab1b202ed00a
+    data:
+      hvac_mode: 'off'
+  mode: single
+
+# ===== automation.cooling_downstair_off =====
+automation.cooling_downstair_off:
+  id: '1786951870846'
+  alias: Cooling Downstair Off
+  description: ''
+  triggers:
+  - trigger: climate.target_temperature_crossed_threshold
+    target:
+      floor_id:
+      - ground_floor
+    options:
+      behavior: all
+      threshold:
+        type: below
+        value:
+          active_choice: number
+          number: 20
+          unit_of_measurement: °C
+      for:
+        hours: 0
+        minutes: 10
+        seconds: 0
+  conditions: []
+  actions:
+  - action: climate.set_hvac_mode
+    metadata: {}
+    data:
+      hvac_mode: 'off'
+    target:
+      device_id: d5574f4e3d430263327013652128fb62
+  mode: single
+

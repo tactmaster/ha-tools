@@ -1,0 +1,41 @@
+# automation.wake_luftwarmer
+# alias      : Heating - Wake Luftwarmer
+# unique_id  : 1664978776780
+# state      : on
+# last_trig  : 2026-05-04T14:30:00.038177+00:00
+# mode       : single
+# label      : heating
+
+action:
+- device_id: ed758bd99648417ea59bc7ed49bc5a3f
+  domain: climate
+  entity_id: climate.daikin
+  hvac_mode: heat
+  type: set_hvac_mode
+- data:
+    fan_mode: '5'
+  service: climate.set_fan_mode
+  target:
+    device_id: ed758bd99648417ea59bc7ed49bc5a3f
+- data: {}
+  service: climate.turn_on
+  target:
+    device_id: ed758bd99648417ea59bc7ed49bc5a3f
+- data:
+    temperature: 18
+  service: climate.set_temperature
+  target:
+    device_id: ed758bd99648417ea59bc7ed49bc5a3f
+alias: Heating - Wake Luftwarmer
+condition:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1664978776780'
+mode: single
+trigger:
+- entity_id:
+  - schedule.wake_up_schedule
+  platform: state
+  to: 'on'

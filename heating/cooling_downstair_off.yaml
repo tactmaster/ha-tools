@@ -1,0 +1,37 @@
+# automation.cooling_downstair_off
+# alias      : Cooling Downstair Off
+# unique_id  : 1786951870846
+# state      : on
+# last_trig  : 2026-08-24T19:13:47.236607+00:00
+# mode       : single
+# label      : heating
+
+id: '1786951870846'
+alias: Cooling Downstair Off
+description: ''
+triggers:
+- trigger: climate.target_temperature_crossed_threshold
+  target:
+    floor_id:
+    - ground_floor
+  options:
+    behavior: all
+    threshold:
+      type: below
+      value:
+        active_choice: number
+        number: 20
+        unit_of_measurement: °C
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+conditions: []
+actions:
+- action: climate.set_hvac_mode
+  metadata: {}
+  data:
+    hvac_mode: 'off'
+  target:
+    device_id: d5574f4e3d430263327013652128fb62
+mode: single

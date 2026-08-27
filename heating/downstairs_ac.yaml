@@ -1,0 +1,50 @@
+# automation.downstairs_ac
+# alias      : Downstairs AC 
+# unique_id  : 1780292112109
+# state      : off
+# last_trig  : 2026-06-25T08:45:38.860457+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: climate.set_temperature
+  data:
+    hvac_mode: cool
+    temperature: 20
+  metadata: {}
+  target:
+    area_id: 47afe5d17c374c55a761647e1afc5722
+alias: 'Downstairs AC '
+conditions:
+- condition: select.is_option_selected
+  options:
+    behavior: any
+    for: 00:00:00
+    option:
+    - Summer
+  target:
+    entity_id: input_select.season
+description: ''
+id: '1780292112109'
+mode: single
+triggers:
+- options:
+    behavior: any
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+    threshold:
+      type: above
+      value:
+        active_choice: number
+        number: 22
+        unit_of_measurement: °C
+  target:
+    entity_id:
+    - sensor.bens_room_bt_sensor_temperature
+    - sensor.bens_room_heater_temperature
+    - sensor.easyweatherv1_6_5_indoor_temperature
+    - sensor.ellies_room_bt_sensor_temperature
+    - sensor.downylufymund_inside_temperature
+  trigger: temperature.crossed_threshold

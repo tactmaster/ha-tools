@@ -1,0 +1,88 @@
+# Bathroom Floor Heating — single automation
+#
+# Replaces:  automation.floor_heating_on   (1736024879431)
+#            automation.floor_heating_off  (1736024940221)
+#
+# Why replace: both old automations targeted device_ids that no longer exist
+# (6d5793b89ba7e2a0b95eda8a4d6600cc, b1b0827d1652fadcbbd3851a803c7715), so they
+# have been firing on schedule and doing nothing. This targets entity_ids.
+#
+# Rule enforced:
+#     heaters ON   <=>  schedule.floor_heating = on  AND  bathroom toggle = on
+#     anything else -> heaters OFF
+#
+# Manual OFF is reverted while the rule says heat (so a heater cannot be
+# left off by accident). Manual ON is left alone - you can boost outside
+# the schedule, and it holds until the next schedule/toggle change.
+# The house-wide input_boolean.heating is deliberately NOT used here.
+#
+# Paste into: Settings > Automations & scenes > + Create > Edit in YAML
+
+alias: Bathroom Floor Heating
+description: >-
+  Bathroom + downstairs bathroom floor heating follows schedule.floor_heating,
+  gated by input_boolean.bathroom_floor_heating. Reverts a manual switch-off
+  while heating is due; allows a manual boost. Replaces the old Floor Heating
+  On/Off pair.
+
+triggers:
+  # inputs changing -> re-evaluate
+  - trigger: state
+    entity_id:
+      - schedule.floor_heating
+      - input_boolean.bathroom_floor_heating
+    from: "off"
+    to: "on"
+    id: input_on
+
+  - trigger: state
+    entity_id:
+      - schedule.floor_heating
+      - input_boolean.bathroom_floor_heating
+    from: "on"
+    to: "off"
+    id: input_off
+
+  # a heater got switched OFF while it should be heating -> put it back on
+  # 3s settle window so we don't react to our own switching
+  - trigger: state
+    entity_id:
+      - switch.bathroom_heater_switch_0
+      - switch.downstair_bathroom_heater_switch_0
+    to: "off"
+    for: "00:00:03"
+    id: manual_off
+
+  # after a restart, resync to whatever the rule says
+  - trigger: homeassistant
+    event: start
+    id: resync
+
+conditions: []
+
+actions:
+  - choose:
+      - alias: Schedule on AND toggle on -> heaters on
+        conditions:
+          - condition: state
+            entity_id: schedule.floor_heating
+            state: "on"
+          - condition: state
+            entity_id: input_boolean.bathroom_floor_heating
+            state: "on"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id:
+                - switch.bathroom_heater_switch_0
+                - switch.downstair_bathroom_heater_switch_0
+    default:
+      - action: switch.turn_off
+        target:
+          entity_id:
+            - switch.bathroom_heater_switch_0
+            - switch.downstair_bathroom_heater_switch_0
+
+# single + silent: if triggers stack up while running, drop the extras quietly
+mode: single
+max_exceeded: silent

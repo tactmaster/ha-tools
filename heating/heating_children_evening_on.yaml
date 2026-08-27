@@ -1,0 +1,36 @@
+# automation.heating_children_evening_on
+# alias      : Heating - Children Evening on
+# unique_id  : 1666204831763
+# state      : on
+# last_trig  : 2026-05-04T15:00:00.096092+00:00
+# mode       : single
+# label      : heating
+
+action:
+- data: {}
+  service: climate.turn_on
+  target:
+    device_id:
+    - c077980f02fa37ca89176837ee6d3a5f
+    - eb8e98dadcd8e4912dae1c1e683886da
+- data:
+    hvac_mode: heat
+    temperature: 17
+  service: climate.set_temperature
+  target:
+    device_id:
+    - c077980f02fa37ca89176837ee6d3a5f
+    - eb8e98dadcd8e4912dae1c1e683886da
+alias: Heating - Children Evening on
+condition:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1666204831763'
+mode: single
+trigger:
+- entity_id:
+  - schedule.children_evening_heating
+  platform: state
+  to: 'on'

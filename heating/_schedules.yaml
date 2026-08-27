@@ -1,0 +1,44 @@
+# 5 schedule helpers labelled 'Heating'
+# NOTE: schedule time-blocks are not exposed via the REST API.
+# This is current state + attributes only. Full blocks: Settings > Automations & scenes > Schedules
+
+schedule.children_evening_heating:
+  state: 'off'
+  attributes:
+    editable: true
+    next_event: '2026-08-25T17:00:00+02:00'
+    icon: mdi:human-child
+    friendly_name: Children Evening Heating
+
+schedule.heating_kitchen:
+  state: 'off'
+  attributes:
+    editable: true
+    next_event: '2026-08-25T17:00:00+02:00'
+    icon: mdi:faucet
+    friendly_name: Heating Kitchen
+
+schedule.utility_room_floor_heating:
+  state: 'off'
+  attributes:
+    editable: true
+    next_event: '2026-08-25T17:00:00+02:00'
+    icon: mdi:heat-wave
+    friendly_name: Utility Room Floor Heating
+
+schedule.wake_up_schedule:
+  state: 'off'
+  attributes:
+    editable: true
+    next_event: '2026-08-25T13:30:00+02:00'
+    icon: mdi:floor-lamp
+    friendly_name: Wake up Schedule
+
+schedule.working:
+  state: 'on'
+  attributes:
+    editable: true
+    next_event: '2026-08-25T15:30:00+02:00'
+    icon: mdi:briefcase
+    friendly_name: Working
+

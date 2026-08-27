@@ -1,0 +1,26 @@
+# automation.heating_morning_turn_off
+# alias      : Heating - Morning Turn off
+# unique_id  : 1666210680262
+# state      : on
+# last_trig  : None
+# mode       : single
+# label      : heating
+
+id: '1666210680262'
+alias: Heating - Morning Turn off
+description: ''
+triggers:
+- entity_id:
+  - schedule.heating_night
+  to: 'off'
+  trigger: state
+conditions:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+actions:
+- data: {}
+  target:
+    device_id: d5574f4e3d430263327013652128fb62
+  action: climate.turn_off
+mode: single

@@ -1,0 +1,28 @@
+# automation.turn_off_lufty
+# alias      : Heating - Turn off Lufty
+# unique_id  : 1664978971249
+# state      : on
+# last_trig  : 2026-05-04T05:30:00.026292+00:00
+# mode       : single
+# label      : heating
+
+action:
+- data: {}
+  service: climate.turn_off
+  target:
+    device_id:
+    - ed758bd99648417ea59bc7ed49bc5a3f
+    - c1ba82e7f68799b1567d1fca114b267b
+alias: Heating - Turn off Lufty
+condition:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1664978971249'
+mode: single
+trigger:
+- entity_id:
+  - schedule.wake_up_schedule
+  platform: state
+  to: 'off'

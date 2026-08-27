@@ -1,0 +1,70 @@
+# Front Door Switch to Zigbee — FIXED
+#
+# Replaces automation.front_door_switch_to_zigbee (id 1744717132881)
+#
+# THE BUG: the original used `type: toggle` fired by BOTH the `powered` and
+# `not_powered` device triggers. Toggle flips whatever the light currently is,
+# so the switch position and the bulb state drift out of phase the moment
+# anything else touches the light (the sunset automation, a cloud routine, an
+# app tap). After that the physical switch does the OPPOSITE of what you expect
+# until something re-syncs it by luck.
+#
+# Right now they ARE out of phase:
+#     binary_sensor.front_door_outside_switch_input_0_input = on
+#     light.front_door_zigbee_light                          = off
+#
+# THE FIX: drive the light explicitly from the switch position.
+#   switch on  -> light.turn_on
+#   switch off -> light.turn_off
+# turn_on/turn_off are idempotent, so phase drift is impossible.
+#
+# Also fixed: explicit `from:` on each trigger. The original fired on
+# `unavailable -> on`, so every Shelly wifi reconnect toggled the light.
+# Observed twice: 2026-08-12 06:51:30 and 2026-08-22 14:06:27.
+#
+# Also fixed: the trigger referenced device_id 8be3085c6027ad399bd7d2942d7aa067,
+# which is NOT in the device registry. It kept working only because the
+# entity registry id beside it still resolved. Now uses entity_id directly.
+#
+# Paste into: Settings > Automations & scenes > + Create > Edit in YAML
+
+alias: Front Door Switch to Zigbee
+description: >-
+  Front door outside switch drives the Zigbee bulb directly. Explicit on/off
+  matched to switch position so they cannot drift out of phase. Ignores
+  unavailable->on recovery blips.
+
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.front_door_outside_switch_input_0_input
+    from: "off"
+    to: "on"
+    id: switch_on
+
+  - trigger: state
+    entity_id: binary_sensor.front_door_outside_switch_input_0_input
+    from: "on"
+    to: "off"
+    id: switch_off
+
+conditions: []
+
+actions:
+  - choose:
+      - alias: Switch went on -> light on
+        conditions:
+          - condition: trigger
+            id: switch_on
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.front_door_zigbee_light
+            data:
+              brightness_pct: 100
+    default:
+      - action: light.turn_off
+        target:
+          entity_id: light.front_door_zigbee_light
+
+mode: single
+max_exceeded: silent

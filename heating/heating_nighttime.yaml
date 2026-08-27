@@ -1,0 +1,39 @@
+# automation.heating_nighttime
+# alias      : Heating - Nighttime 
+# unique_id  : 1666210366047
+# state      : on
+# last_trig  : None
+# mode       : single
+# label      : heating
+
+id: '1666210366047'
+alias: 'Heating - Nighttime '
+description: ''
+triggers:
+- entity_id:
+  - schedule.heating_night
+  to: 'on'
+  trigger: state
+conditions:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+actions:
+- delay:
+    hours: 0
+    milliseconds: 0
+    minutes: 0
+    seconds: 15
+- action: climate.set_temperature
+  data:
+    hvac_mode: heat
+    temperature: 20
+  target:
+    device_id:
+    - d5574f4e3d430263327013652128fb62
+- action: climate.set_fan_mode
+  data: {}
+  enabled: false
+  target:
+    device_id: d5574f4e3d430263327013652128fb62
+mode: single

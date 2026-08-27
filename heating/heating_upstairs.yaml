@@ -1,0 +1,38 @@
+# automation.heating_upstairs
+# alias      : Heating Upstairs
+# unique_id  : 1705957561327
+# state      : on
+# last_trig  : 2026-05-04T16:00:00.044713+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- device_id: ad5cc49e080ff2cbb1e26b1fd66b96f0
+  domain: switch
+  enabled: false
+  entity_id: f14af394c6c734d2127bcc36f2f424af
+  type: turn_off
+- device_id: ad5cc49e080ff2cbb1e26b1fd66b96f0
+  domain: switch
+  enabled: false
+  entity_id: 5585732cd9da4453615f2a2d98fadd39
+  type: turn_on
+alias: Heating Upstairs
+conditions:
+- condition: state
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1705957561327'
+mode: single
+triggers:
+- entity_id:
+  - schedule.upstairs_heating
+  from: 'on'
+  to: 'off'
+  trigger: state
+- entity_id:
+  - schedule.upstairs_heating
+  from: 'off'
+  to: 'on'
+  trigger: state

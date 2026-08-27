@@ -1,0 +1,16 @@
+# Secrets — NEVER commit
+.ha-token
+*.token
+secrets.yaml
+.env
+*.pem
+*.key
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Editor / OS
+.DS_Store
+*.swp

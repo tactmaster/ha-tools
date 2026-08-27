@@ -1,0 +1,34 @@
+
+alias: "Getting Ready "
+description: ""
+triggers:
+  - trigger: time
+    at: "08:00:00"
+conditions:
+  - condition: time
+    weekday:
+      - fri
+      - thu
+      - wed
+      - tue
+      - mon
+      - sat
+      - sun
+actions:
+  - action: tts.speak
+    metadata: {}
+    data:
+      cache: true
+      media_player_entity_id: media_player.whole_house
+      message: |
+        {%- set messages = [
+          "It is time for Ben and Ellie to get breakfast if they have not already had it or started",
+          "Time to get breakfast, Ben and Ellie",
+          "It breakfast time , it breakfast time, it breakfast time, won't you have some breakfast of mine. Have you breakfast if you have not already or already started.",
+          "I DELCARE BREAKFAST TIME! Have you breakfast if you have not already or already started.",
+          "shhhhh, it time for breakfast don't tell anyone one. Have you breakfast if you have not already or already started."
+        ] -%}
+        {{ (messages | shuffle)[0] }}
+    target:
+      entity_id: tts.home_assistant_cloud
+mode: single

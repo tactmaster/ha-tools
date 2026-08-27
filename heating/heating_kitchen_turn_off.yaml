@@ -1,0 +1,32 @@
+# automation.heating_kitchen_turn_off
+# alias      : Heating - Kitchen Turn Off
+# unique_id  : 1698994286911
+# state      : on
+# last_trig  : 2026-05-04T05:30:00.030190+00:00
+# mode       : single
+# label      : heating
+
+actions:
+- action: climate.turn_off
+  data: {}
+- action: climate.set_temperature
+  data:
+    hvac_mode: heat
+    temperature: 16
+  enabled: true
+  target:
+    device_id: c1ba82e7f68799b1567d1fca114b267b
+alias: Heating - Kitchen Turn Off
+conditions:
+- condition: state
+  enabled: true
+  entity_id: input_boolean.heating
+  state: 'on'
+description: ''
+id: '1698994286911'
+mode: single
+triggers:
+- entity_id:
+  - schedule.heating_kitchen
+  to: 'off'
+  trigger: state
